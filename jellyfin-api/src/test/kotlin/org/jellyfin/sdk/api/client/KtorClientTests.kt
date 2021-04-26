@@ -1,8 +1,12 @@
 package org.jellyfin.sdk.api.client
 
+import kotlinx.coroutines.runBlocking
+import org.jellyfin.sdk.api.client.extensions.authenticateUserByName
+import org.jellyfin.sdk.api.operations.UserApi
 import org.jellyfin.sdk.model.ClientInfo
 import org.jellyfin.sdk.model.DeviceInfo
 import org.jellyfin.sdk.model.api.ItemFields
+import org.jellyfin.sdk.model.api.UpdateUserEasyPassword
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -47,7 +51,8 @@ public class KtorClientTests {
 			"str" to "str"
 		)
 
-		assertEquals(instance.baseUrl + "test?one=1&bool=true&str=str", instance.createUrl("test", queryParameters = parameters))
+		assertEquals(instance.baseUrl + "test?one=1&bool=true&str=str",
+			instance.createUrl("test", queryParameters = parameters))
 	}
 
 	@Test
@@ -58,6 +63,19 @@ public class KtorClientTests {
 			"field2" to ItemFields.DATE_CREATED,
 		)
 
-		assertEquals(instance.baseUrl + "test?field1=Chapters&field2=DateCreated", instance.createUrl("test", queryParameters = parameters))
+		assertEquals(instance.baseUrl + "test?field1=Chapters&field2=DateCreated",
+			instance.createUrl("test", queryParameters = parameters))
+	}
+
+	@Test
+	public fun `test2`() {
+		runBlocking {
+			val client = createClient()
+			val userApi = UserApi(client)
+			val auth by userApi.authenticateUserByName("demo", "")
+			client.accessToken = auth.accessToken
+
+			userApi.updateUserEasyPassword(auth.user!!.id, UpdateUserEasyPassword("1234", "1234", false))
+		}
 	}
 }

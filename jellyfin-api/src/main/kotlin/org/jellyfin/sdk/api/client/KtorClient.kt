@@ -10,11 +10,12 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.network.sockets.*
 import io.ktor.util.*
+import io.ktor.utils.io.*
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
 import org.jellyfin.sdk.api.client.exception.InvalidContentException
 import org.jellyfin.sdk.api.client.exception.InvalidStatusException
 import org.jellyfin.sdk.api.client.exception.TimeoutException
+import org.jellyfin.sdk.api.client.serialization.ApiDeserializer
 import org.jellyfin.sdk.api.client.util.AuthorizationHeaderBuilder
 import org.jellyfin.sdk.api.client.util.PathBuilder
 import org.jellyfin.sdk.model.ClientInfo
@@ -22,7 +23,10 @@ import org.jellyfin.sdk.model.DeviceInfo
 import org.slf4j.LoggerFactory
 import java.net.UnknownHostException
 import java.util.*
+import kotlin.reflect.KType
+import kotlin.reflect.typeOf
 
+@OptIn(ExperimentalStdlibApi::class)
 public open class KtorClient(
 	override var baseUrl: String? = null,
 	override var accessToken: String? = null,
@@ -31,12 +35,7 @@ public open class KtorClient(
 	override var deviceInfo: DeviceInfo,
 	override val httpClientOptions: HttpClientOptions,
 ) : ApiClient {
-	private val json = Json {
-		isLenient = false
-		ignoreUnknownKeys = true
-		allowSpecialFloatingPointValues = true
-		useArrayPolymorphism = false
-	}
+	public val apiDeserializer: ApiDeserializer = ApiDeserializer()
 
 	/**
 	 * Internal HTTP client. Should not be used directly. Use [request] instead.
@@ -47,7 +46,7 @@ public open class KtorClient(
 		expectSuccess = false
 
 		install(JsonFeature) {
-			serializer = KotlinxSerializer(json)
+			serializer = KotlinxSerializer(apiDeserializer.json)
 		}
 
 		install(HttpTimeout) {
@@ -97,12 +96,13 @@ public open class KtorClient(
 	}
 
 	@Suppress("ThrowsCount")
-	public suspend inline fun <reified T> request(
+	public suspend fun <T> request(
 		method: HttpMethod = HttpMethod.Get,
 		pathTemplate: String,
 		pathParameters: Map<String, Any?> = emptyMap(),
 		queryParameters: Map<String, Any?> = emptyMap(),
 		requestBody: Any? = null,
+		responseType: KType = typeOf<Unit>(),
 	): Response<T> {
 		val logger = LoggerFactory.getLogger(this::class.java)
 		val url = createUrl(pathTemplate, pathParameters, queryParameters)
@@ -113,7 +113,7 @@ public open class KtorClient(
 
 		@Suppress("SwallowedException", "TooGenericExceptionCaught")
 		try {
-			val response = client.request<HttpResponse> {
+			val request = client.request<HttpStatement> {
 				this.method = method
 				url(url)
 				header(
@@ -130,12 +130,17 @@ public open class KtorClient(
 				if (requestBody != null) body = defaultSerializer().write(requestBody)
 			}
 
+			val response = request.execute()
+
 			// Check HTTP status
 			if (!response.status.isSuccess()) throw InvalidStatusException(response.status.value)
 			// Read response body
-			val body = response.receive<T>()
-			// Return custom response instance
-			return Response(body, response.status.value, response.headers.toMap())
+			val channel = response.receive<ByteReadChannel>()
+			return Response(
+				content = apiDeserializer.deserialize(channel, responseType) as T,
+				status = response.status.value,
+				headers = response.headers.toMap()
+			)
 		} catch (err: UnknownHostException) {
 			logger.debug("HTTP host unreachable", err)
 			throw TimeoutException(err.message)
@@ -170,7 +175,8 @@ public open class KtorClient(
 		pathTemplate = pathTemplate,
 		pathParameters = pathParameters,
 		queryParameters = queryParameters,
-		requestBody = requestBody
+		requestBody = requestBody,
+		responseType = typeOf<T>(),
 	)
 
 	public suspend inline fun <reified T> post(
@@ -183,7 +189,8 @@ public open class KtorClient(
 		pathTemplate = pathTemplate,
 		pathParameters = pathParameters,
 		queryParameters = queryParameters,
-		requestBody = requestBody
+		requestBody = requestBody,
+		responseType = typeOf<T>(),
 	)
 
 	public suspend inline fun <reified T> delete(
@@ -196,6 +203,7 @@ public open class KtorClient(
 		pathTemplate = pathTemplate,
 		pathParameters = pathParameters,
 		queryParameters = queryParameters,
-		requestBody = requestBody
+		requestBody = requestBody,
+		responseType = typeOf<T>(),
 	)
 }
