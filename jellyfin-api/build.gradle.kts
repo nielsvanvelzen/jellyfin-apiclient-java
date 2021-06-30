@@ -9,6 +9,7 @@ dependencies {
 	implementation(libs.kotlinx.coroutines)
 	implementation(libs.ktor.okhttp)
 	implementation(libs.ktor.serialization)
+	implementation(libs.ktor.logging)
 
 	// Logging
 	implementation(libs.slf4j.api)

@@ -19,6 +19,7 @@ ktor-http = { group = "io.ktor", name = "ktor-http", version.ref = "ktor" }
 ktor-io = { group = "io.ktor", name = "ktor-io", version.ref = "ktor" }
 ktor-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
 ktor-serialization = { group = "io.ktor", name = "ktor-client-serialization-jvm", version.ref = "ktor" }
+ktor-logging = { group = "io.ktor", name = "ktor-client-logging", version.ref = "ktor" }
 slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
 slf4j-simple = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4j" }
 swaggerParser = { group = "io.swagger.parser.v3", name = "swagger-parser", version = "2.0.26" }

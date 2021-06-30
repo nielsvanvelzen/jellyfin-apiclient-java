@@ -5,6 +5,7 @@ import io.ktor.client.call.*
 import io.ktor.client.features.*
 import io.ktor.client.features.json.*
 import io.ktor.client.features.json.serializer.*
+import io.ktor.client.features.logging.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -54,6 +55,20 @@ public open class KtorClient(
 			connectTimeoutMillis = httpClientOptions.connectTimeout
 			requestTimeoutMillis = httpClientOptions.requestTimeout
 			socketTimeoutMillis = httpClientOptions.socketTimeout
+		}
+
+		install(Logging) {
+			logger = object : Logger {
+				private val logger = LoggerFactory.getLogger(this@KtorClient::class.java)
+				override fun log(message: String) =	logger.debug(message)
+			}
+
+			level = when (httpClientOptions.loggingLevel) {
+				LoggingLevel.DEFAULT -> LogLevel.NONE
+				LoggingLevel.HEADERS -> LogLevel.HEADERS
+				LoggingLevel.BODY -> LogLevel.BODY
+				LoggingLevel.HEADERS_BODY -> LogLevel.ALL
+			}
 		}
 	}
 

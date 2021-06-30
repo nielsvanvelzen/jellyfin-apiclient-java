@@ -27,4 +27,10 @@ public data class HttpClientOptions(
 	 * Defaults to 10 seconds.
 	 */
 	val socketTimeout: Long = 10_000,
+
+	/**
+	 * The amount of logging used for requests and responses.
+	 * See [LoggingLevel] for the different tiers of logging.
+	 */
+	val loggingLevel: LoggingLevel = LoggingLevel.DEFAULT,
 )
